@@ -1,4 +1,4 @@
-name: libxlsxwriter MSVC builds (vcpkg classic)
+name: libxlsxwriter MSVC DLL builds
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        triplet: [x86-windows-static, x64-windows-static]
+        triplet: [x86-windows, x64-windows]   # << DLL-Variante
     steps:
       - uses: actions/checkout@v4
 
@@ -26,15 +26,17 @@ jobs:
         run: |
           & $env:RUNNER_TEMP\vcpkg\vcpkg install libxlsxwriter:${{ matrix.triplet }}
 
-      - name: Pack headers + libs
+      - name: Pack headers + libs + dlls
         shell: pwsh
         run: |
-          $root = Join-Path $env:RUNNER_TEMP 'vcpkg\installed\${{ matrix.triplet }}'
+          $root = Join-Path $env:RUNNER_TEMP "vcpkg\installed\${{ matrix.triplet }}"
           $zip  = "libxlsxwriter-${{ matrix.triplet }}.zip"
-          Compress-Archive -Path (Join-Path $root 'include'), (Join-Path $root 'lib') -DestinationPath $zip -Force
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          Compress-Archive -Path `
+            (Join-Path $root 'include'), `
+            (Join-Path $root 'lib'), `
+            (Join-Path $root 'bin') `
+            -DestinationPath $zip -Force
+      - uses: actions/upload-artifact@v4
         with:
           name: libxlsxwriter-${{ matrix.triplet }}
           path: libxlsxwriter-${{ matrix.triplet }}.zip
