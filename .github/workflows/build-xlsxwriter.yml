@@ -1,0 +1,35 @@
+name: libxlsxwriter MSVC builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        triplet: [x86-windows-static, x64-windows-static]  # statisch (keine DLLs nötig)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up vcpkg
+        uses: microsoft/setup-vcpkg@v1
+        with:
+          vcpkgGitCommitId: 9db1a6b0b7c6f7e1e3b6a8a2f2e5c9a1a2b3c4d5  # optional: pinnen
+
+      - name: Install libxlsxwriter via vcpkg
+        run: vcpkg install libxlsxwriter:${{ matrix.triplet }}
+
+      - name: Export package as zip
+        run: |
+          vcpkg export libxlsxwriter:${{ matrix.triplet }} --zip --output-dir . --output=libxlsxwriter-${{ matrix.triplet }}
+          echo "done"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libxlsxwriter-${{ matrix.triplet }}
+          path: libxlsxwriter-${{ matrix.triplet }}.zip
