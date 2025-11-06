@@ -1,32 +1,37 @@
-name: libxlsxwriter MSVC builds
+name: libxlsxwriter MSVC builds (vcpkg classic)
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
-        triplet: [x86-windows-static, x64-windows-static]  # statisch (keine DLLs nötig)
+        triplet: [x86-windows-static, x64-windows-static]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up vcpkg
-        uses: microsoft/setup-vcpkg@v1
-        with:
-          vcpkgGitCommitId: 9db1a6b0b7c6f7e1e3b6a8a2f2e5c9a1a2b3c4d5  # optional: pinnen
-
-      - name: Install libxlsxwriter via vcpkg
-        run: vcpkg install libxlsxwriter:${{ matrix.triplet }}
-
-      - name: Export package as zip
+      - name: Clone vcpkg
+        shell: pwsh
         run: |
-          vcpkg export libxlsxwriter:${{ matrix.triplet }} --zip --output-dir . --output=libxlsxwriter-${{ matrix.triplet }}
-          echo "done"
+          git clone https://github.com/microsoft/vcpkg $env:RUNNER_TEMP\vcpkg
+          & $env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat
+
+      - name: Install libxlsxwriter
+        shell: pwsh
+        run: |
+          & $env:RUNNER_TEMP\vcpkg\vcpkg install libxlsxwriter:${{ matrix.triplet }}
+
+      - name: Pack headers + libs
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'vcpkg\installed\${{ matrix.triplet }}'
+          $zip  = "libxlsxwriter-${{ matrix.triplet }}.zip"
+          Compress-Archive -Path (Join-Path $root 'include'), (Join-Path $root 'lib') -DestinationPath $zip -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
